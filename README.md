@@ -31,9 +31,3 @@ secrets. The PAT that sends the dispatch lives in the site source repo.
 ```bash
 curl -sSL https://jquest.dev/ | grep -oE '<title>[^<]*</title>'
 ```
-
----
-
-The committed files at the repository root are the last force-pushed build from before
-this repo adopted the official Pages workflow. They are not what Pages serves — the
-deployment artifact is — and can be deleted.
