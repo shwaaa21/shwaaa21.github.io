@@ -1,0 +1,73 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or SHA of personal-astro-site to build
+        required: false
+        default: personal-site
+
+# This repo serves no site code of its own. It checks out personal-astro-site,
+# builds it, and publishes the result. The Pages API only accepts deployments
+# from the repo where Pages is enabled, which is why the workflow lives here
+# rather than alongside the site source.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages serves one deployment at a time, so a newer push supersedes any run
+# still in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout site source
+        uses: actions/checkout@v5
+        with:
+          repository: shwaaa21/personal-astro-site
+          ref: ${{ inputs.ref || 'personal-site' }}
+          path: site
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Build
+        working-directory: site
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    # GitHub reads the URL and name back from the environment so the deploy
+    # shows up on the Pages settings page.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
