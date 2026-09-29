@@ -17,14 +17,14 @@ is* lives in the source repo.
 ## Deploying
 
 Pushes to `personal-site` in the site source repo deploy automatically: that repo's CI
-builds, then sends a `repository_dispatch` here, which builds and publishes. The dispatch
-carries the exact commit SHA, so each deploy builds the commit that triggered it.
+builds, then triggers this workflow, which builds and publishes. The trigger passes the
+exact commit SHA, so each deploy builds the commit that triggered it.
 
 For a manual deploy, Actions → **Deploy to GitHub Pages** → **Run workflow**. The `ref`
 input selects a branch or SHA of the site source and defaults to `personal-site`.
 
 Publishing is authenticated with an OIDC token issued for the job, so this repo holds no
-secrets. The PAT that sends the dispatch lives in the site source repo.
+secrets. The PAT that triggers the workflow lives in the site source repo.
 
 ## Local check of the live site
 

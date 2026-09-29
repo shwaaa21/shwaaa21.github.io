@@ -4,17 +4,19 @@ on:
   push:
     branches:
       - main
-  # Fired by the source repo's CI after a successful push to personal-site.
-  # A repository_dispatch run has no `inputs` context, so the ref arrives in
-  # client_payload instead; the resolution step below reconciles the two.
-  repository_dispatch:
-    types: [pages-deploy]
+  # Fired by the source repo's CI after a push to personal-site, and usable by
+  # hand. The source repo passes the exact commit to build as an input, so two
+  # rapid pushes cannot race.
   workflow_dispatch:
     inputs:
       ref:
         description: Branch or SHA of personal-astro-site to build
         required: false
         default: personal-site
+      sha:
+        description: Commit to build, overrides ref when set
+        required: false
+        type: string
 
 # This repo serves no site code of its own. It checks out personal-astro-site,
 # builds it, and publishes the result. The Pages API only accepts deployments
@@ -36,24 +38,23 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      # repository_dispatch has no ref parameter, so the source repo passes the
-      # exact commit it wants built in client_payload. Pinning to that SHA
-      # rather than the branch name means two rapid pushes cannot race, with the
-      # second run silently building a commit newer than the one that fired it.
+      # The source repo passes the exact commit it wants built as an input.
+      # Pinning to that SHA rather than the branch name means two rapid pushes
+      # cannot race, with the second run silently building a commit newer than
+      # the one that fired it.
       - name: Resolve source ref
         id: src
         env:
-          DISPATCH_REF: ${{ github.event.client_payload.ref }}
-          DISPATCH_SHA: ${{ github.event.client_payload.sha }}
-          INPUT_REF: ${{ inputs.ref }}
+          SHA: ${{ inputs.sha }}
+          REF: ${{ inputs.ref }}
         run: |
           set -euo pipefail
-          if [ -n "$DISPATCH_SHA" ]; then
-            ref="$DISPATCH_SHA"
-            echo "source: dispatched $DISPATCH_REF @ $DISPATCH_SHA"
-          elif [ -n "$INPUT_REF" ]; then
-            ref="$INPUT_REF"
-            echo "source: manual $INPUT_REF"
+          if [ -n "$SHA" ]; then
+            ref="$SHA"
+            echo "source: requested $REF @ $SHA"
+          elif [ -n "$REF" ]; then
+            ref="$REF"
+            echo "source: $REF"
           else
             ref="personal-site"
             echo "source: default personal-site"
